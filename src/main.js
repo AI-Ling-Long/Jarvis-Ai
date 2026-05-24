@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu } = require("electron");
+const { app, BrowserWindow } = require("electron");
 const path = require("path");
 const { spawn } = require("child_process");
 
@@ -30,10 +30,10 @@ function startServer() {
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
-    width: 1100,
-    height: 720,
-    minWidth: 820,
-    minHeight: 600,
+    width: 1280,
+    height: 900,
+    minWidth: 960,
+    minHeight: 640,
     show: false,
     autoHideMenuBar: true,
     webPreferences: {

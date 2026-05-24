@@ -1,18 +1,14 @@
-const appShell = document.getElementById("app-shell");
-const brandPanel = document.getElementById("brand-panel");
+const authShell = document.getElementById("auth-shell");
 const loginView = document.getElementById("login-view");
 const signupView = document.getElementById("signup-view");
-const dashboardView = document.getElementById("dashboard-view");//dashboard
+const dashboardView = document.getElementById("dashboard-view");
 
 const loginForm = document.getElementById("login-form");
 const signupForm = document.getElementById("signup-form");
-// const addUserForm = document.getElementById("add-user-form");//dashboard
+const rememberInput = loginForm.elements.remember;
 
 const loginMessage = document.getElementById("login-message");
 const signupMessage = document.getElementById("signup-message");
-const dashboardMessage = document.getElementById("dashboard-message");//dashboard
-const dashboardGreeting = document.getElementById("dashboard-greeting");//dashboard
-// const usersTableBody = document.getElementById("users-table-body");//dashboard
 
 const passwordInput = document.getElementById("password");
 const togglePasswordBtn = document.getElementById("toggle-password");
@@ -20,6 +16,7 @@ const iconShow = togglePasswordBtn.querySelector(".icon-show");
 const iconHide = togglePasswordBtn.querySelector(".icon-hide");
 
 let currentUser = null;
+const rememberedUserKey = "jarvis.rememberedUser";
 
 function showMessage(element, text, isError = false) {
   element.textContent = text;
@@ -35,17 +32,18 @@ function clearMessage(element) {
 
 function showView(view) {
   const isDashboard = view === "dashboard";
-  appShell.classList.toggle("dashboard-mode", isDashboard);
-  brandPanel.hidden = isDashboard;
+
+  authShell.hidden = isDashboard;
+  dashboardView.hidden = !isDashboard;
   loginView.hidden = view !== "login";
   signupView.hidden = view !== "signup";
-  dashboardView.hidden = !isDashboard;
 }
 
 function ensureApi() {
   if (!window.jarvis?.api) {
     throw new Error("API bridge unavailable. Restart the app.");
   }
+
   return window.jarvis.api;
 }
 
@@ -63,77 +61,45 @@ function validateUserPayload({ name, email, password }) {
   if (!isValidEmail(email)) return "Enter a valid email address.";
   if (!password) return "Password is required.";
   if (password.length < 6) return "Password must be at least 6 characters.";
+
   return null;
-}
-
-// async function loadUsers() {
-//   const api = ensureApi();
-//   const users = await api.getUsers();
-
-//   if (!users.length) {
-//     usersTableBody.innerHTML =
-//       '<tr><td colspan="4" class="empty-row">No users yet.</td></tr>';
-//     return;
-//   }
-
-//   usersTableBody.innerHTML = users
-//     .map(
-//       (user) => `
-//         <tr>
-//           <td>${user.id}</td>
-//           <td>${escapeHtml(user.name || "—")}</td>
-//           <td>${escapeHtml(user.email || "—")}</td>
-//           <td>
-//             <button type="button" class="btn btn-danger btn-small" data-delete-id="${user.id}">
-//               Delete
-//             </button>
-//           </td>
-//         </tr>
-//       `
-//     )
-//     .join("");
-
-//   usersTableBody.querySelectorAll("[data-delete-id]").forEach((button) => {
-//     button.addEventListener("click", () => handleDeleteUser(button.dataset.deleteId));
-//   });
-// }
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
 }
 
 async function openDashboard(user) {
   currentUser = user;
-  dashboardGreeting.textContent = `Signed in as ${user.name || user.email}`;
-  clearMessage(dashboardMessage);
   showView("dashboard");
 
-  // try {
-  //   await loadUsers();
-  // } catch (error) {
-  //   showMessage(dashboardMessage, error.message, true);
-  // }
+  if (typeof window.initDashboard === "function") {
+    window.initDashboard(user);
+  }
 }
 
-// async function handleDeleteUser(id) {
-//   clearMessage(dashboardMessage);
+function rememberUser(user) {
+  localStorage.setItem(rememberedUserKey, JSON.stringify(user));
+}
 
-//   try {
-//     const api = ensureApi();
-//     await api.deleteUser(id);
-//     showMessage(dashboardMessage, "User deleted.", false);
-//     await loadUsers();
-//   } catch (error) {
-//     showMessage(dashboardMessage, error.message, true);
-//   }
-// }
+function forgetUser() {
+  localStorage.removeItem(rememberedUserKey);
+}
 
-togglePasswordBtn.addEventListener("click", () => {
+function getRememberedUser() {
+  try {
+    const rawUser = localStorage.getItem(rememberedUserKey);
+    if (!rawUser) return null;
+
+    const user = JSON.parse(rawUser);
+    if (!user || typeof user !== "object" || !user.email) return null;
+
+    return user;
+  } catch {
+    forgetUser();
+    return null;
+  }
+}
+
+function handleTogglePassword() {
   const isHidden = passwordInput.type === "password";
+
   passwordInput.type = isHidden ? "text" : "password";
   iconShow.hidden = isHidden;
   iconHide.hidden = !isHidden;
@@ -141,30 +107,30 @@ togglePasswordBtn.addEventListener("click", () => {
     "aria-label",
     isHidden ? "Hide password" : "Show password"
   );
-});
+}
 
-document.getElementById("show-signup").addEventListener("click", (event) => {
+function showSignup(event) {
   event.preventDefault();
   clearMessage(loginMessage);
   clearMessage(signupMessage);
   showView("signup");
-});
+}
 
-document.getElementById("show-login").addEventListener("click", (event) => {
+function showLogin(event) {
   event.preventDefault();
   clearMessage(loginMessage);
   clearMessage(signupMessage);
   showView("login");
-});
+}
 
-document.getElementById("logout-btn").addEventListener("click", () => {
+function logout() {
   currentUser = null;
+  forgetUser();
   loginForm.reset();
-  clearMessage(dashboardMessage);
   showView("login");
-});
+}
 
-loginForm.addEventListener("submit", async (event) => {
+async function submitLogin(event) {
   event.preventDefault();
   clearMessage(loginMessage);
 
@@ -176,13 +142,20 @@ loginForm.addEventListener("submit", async (event) => {
       email: formData.get("email"),
       password: formData.get("password"),
     });
+
+    if (rememberInput.checked) {
+      rememberUser(user);
+    } else {
+      forgetUser();
+    }
+
     await openDashboard(user);
   } catch (error) {
     showMessage(loginMessage, error.message, true);
   }
-});
+}
 
-signupForm.addEventListener("submit", async (event) => {
+async function submitSignup(event) {
   event.preventDefault();
   clearMessage(signupMessage);
 
@@ -196,6 +169,7 @@ signupForm.addEventListener("submit", async (event) => {
   };
 
   const validationError = validateUserPayload(payload);
+
   if (validationError) {
     showMessage(signupMessage, validationError, true);
     return;
@@ -203,6 +177,7 @@ signupForm.addEventListener("submit", async (event) => {
 
   try {
     const api = ensureApi();
+
     await api.createUser(payload);
     showMessage(signupMessage, "Account created. You can log in now.", false);
     signupForm.reset();
@@ -210,40 +185,30 @@ signupForm.addEventListener("submit", async (event) => {
   } catch (error) {
     showMessage(signupMessage, error.message, true);
   }
-});
+}
 
-// addUserForm.addEventListener("submit", async (event) => {
-//   event.preventDefault();
-//   clearMessage(dashboardMessage);
+function preventPlaceholderLinks() {
+  document
+    .querySelectorAll('#auth-shell a[href="#"]:not(#show-signup):not(#show-login)')
+    .forEach((link) => {
+      link.addEventListener("click", (event) => event.preventDefault());
+    });
+}
 
-//   if (!addUserForm.reportValidity()) return;
+togglePasswordBtn.addEventListener("click", handleTogglePassword);
+document.getElementById("show-signup").addEventListener("click", showSignup);
+document.getElementById("show-login").addEventListener("click", showLogin);
+document.getElementById("logout-btn").addEventListener("click", logout);
+loginForm.addEventListener("submit", submitLogin);
+signupForm.addEventListener("submit", submitSignup);
 
-//   const formData = new FormData(addUserForm);
-//   const payload = {
-//     name: readFormField(formData, "name"),
-//     email: readFormField(formData, "email"),
-//     password: readFormField(formData, "password"),
-//   };
+preventPlaceholderLinks();
 
-//   const validationError = validateUserPayload(payload);
-//   if (validationError) {
-//     showMessage(dashboardMessage, validationError, true);
-//     return;
-//   }
+const rememberedUser = getRememberedUser();
 
-//   try {
-//     const api = ensureApi();
-//     await api.createUser(payload);
-//     addUserForm.reset();
-//     showMessage(dashboardMessage, "User added.", false);
-//     await loadUsers();
-//   } catch (error) {
-//     showMessage(dashboardMessage, error.message, true);
-//   }
-// });
-
-document.querySelectorAll('a[href="#"]:not(#show-signup):not(#show-login)').forEach((link) => {
-  link.addEventListener("click", (event) => event.preventDefault());
-});
-
-showView("login");
+if (rememberedUser) {
+  rememberInput.checked = true;
+  openDashboard(rememberedUser);
+} else {
+  showView("login");
+}
