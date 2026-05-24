@@ -48,9 +48,18 @@ a:hover {
   text-decoration: underline;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .login-page {
   display: flex;
   min-height: 100%;
+}
+
+.login-page.dashboard-mode .login-panel {
+  min-height: 100vh;
+  width: 100%;
 }
 
 /* ── Left brand panel ── */
@@ -64,7 +73,7 @@ a:hover {
   overflow: hidden;
 }
 
-.brand-content {
+.brand-features {
   padding: 3rem 2.5rem 2rem;
   z-index: 1;
 }
@@ -100,7 +109,11 @@ a:hover {
   font-size: 0.95rem;
 }
 
-.feature-list {
+.feature-list[hidden] {
+  display: none !important;
+}
+
+.feature-list:not([hidden]) {
   list-style: none;
   margin: 0;
   padding: 0;

@@ -1,10 +1,12 @@
 import express from "express";
 import cors from "cors";
-import { isEmail } from "validator";
+import validator from "validator";
 import { scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import { eq } from "drizzle-orm";
 import { db } from "./db.js";
 import { users } from "./schema.js";
+
+const { isEmail } = validator;
 
 const app = express();
 const port = process.env.PORT || 3000;

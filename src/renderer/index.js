@@ -1,3 +1,5 @@
+const appShell = document.getElementById("app-shell");
+const brandPanel = document.getElementById("brand-panel");
 const loginView = document.getElementById("login-view");
 const signupView = document.getElementById("signup-view");
 const dashboardView = document.getElementById("dashboard-view");//dashboard
@@ -32,9 +34,12 @@ function clearMessage(element) {
 }
 
 function showView(view) {
+  const isDashboard = view === "dashboard";
+  appShell.classList.toggle("dashboard-mode", isDashboard);
+  brandPanel.hidden = isDashboard;
   loginView.hidden = view !== "login";
   signupView.hidden = view !== "signup";
-  dashboardView.hidden = view !== "dashboard";
+  dashboardView.hidden = !isDashboard;
 }
 
 function ensureApi() {
