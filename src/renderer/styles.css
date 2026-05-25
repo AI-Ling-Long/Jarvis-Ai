@@ -407,6 +407,10 @@ a:hover {
   border-color: #94a3b8;
 }
 
+.social-icon {
+  flex-shrink: 0;
+}
+
 .signup-prompt {
   margin: 1.35rem 0 0;
   text-align: center;

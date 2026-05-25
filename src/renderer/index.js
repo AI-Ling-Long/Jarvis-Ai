@@ -134,14 +134,22 @@ async function submitLogin(event) {
   event.preventDefault();
   clearMessage(loginMessage);
 
+  if (!loginForm.reportValidity()) return;
+
   const formData = new FormData(loginForm);
+  const payload = {
+    email: readFormField(formData, "email"),
+    password: readFormField(formData, "password"),
+  };
+
+  if (!isValidEmail(payload.email)) {
+    showMessage(loginMessage, "Enter a valid email address.", true);
+    return;
+  }
 
   try {
     const api = ensureApi();
-    const user = await api.login({
-      email: formData.get("email"),
-      password: formData.get("password"),
-    });
+    const user = await api.login(payload);
 
     if (rememberInput.checked) {
       rememberUser(user);
